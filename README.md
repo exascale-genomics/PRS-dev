@@ -2,7 +2,7 @@
 
 Build a Nextflow workflow for PRS analysis following: https://choishingwan.github.io/PRS-Tutorial/
 
-------------------------------------------------------
+
 reqirements:
 install nextflow:
 reqiure java
@@ -39,7 +39,7 @@ install.packages(c("devtools","RcppArmadillo", "data.table", "Matrix"), dependen
 library(devtools)
 install_github("tshmak/lassosum")
 
-------------------------------------------------------
+
 base data applied QC:
 File transfer
 Standard GWAS QC
@@ -53,7 +53,7 @@ Mismatching SNPs
 Sex chromosomes
 Relatedness
 
-------------------------------------------------------
+
 base data missing QC: 
 Heritability check
 Effect allele
