@@ -1,9 +1,18 @@
+// TODO: add Genome build QC
 
 // parameters
 params.base_data = 'Height.gwas.txt.gz'
 params.target_data = '/home/ubuntu/inputs_target_test'
 params.outdir = '/home/ubuntu/outputs'
+params.PRSice = '/home/ubuntu/PRSice'
 params.workingDir = System.getProperty("user.dir")
+
+// settings
+//// PRSice
+params.PRSice = '/home/ubuntu/PRSice'
+//// lassosum
+lassosum_prefix_to_ld_mapping = ["EUR":"EUR.hg19", "TMP":"EUR.hg19"]
+
 
 // helper: checks if the file exists
 checker = { fn ->
@@ -19,14 +28,14 @@ Channel.fromFilePairs("$params.target_data/*.{bed,bim,cov,fam,height}", size: 5,
                      { file -> file.baseName }\
                      .ifEmpty { error "No matching target files" }\
                      .map { a -> [a[1].baseName, checker(a[1]), checker(a[2]), checker(a[3]), checker(a[4]), checker(a[5])] }\
-                     .multiMap { it -> copy1: copy2: copy3: copy4: copy5: copy6: copy7: copy8: copy9: copy10: copy11: it }
+                     .multiMap { it -> copy1: copy2: copy3: copy4: copy5: copy6: copy7: copy8: copy9: copy10: it }
                      .set { target_data }
 
 ///////// base data QC /////////
 // base data QC: File transfer
 process base_qc_file_transfer {
     
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}/md5sum_results", mode: 'copy'
 
     input:
     file base_data
@@ -123,7 +132,7 @@ process base_qc_ambiguous_snps {
 // target data QC: File transfer
 process target_qc_file_transfer {
 
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}/md5sum_results", mode: 'copy'
 
     input:
     tuple prefix, file(bed), file(bim), file(cov), file(fam), file(height) from target_data.copy1
@@ -293,7 +302,7 @@ process target_qc_final {
     """  
 }
 
-target_qc_final_output.into { target_qc_final_output_copy1; target_qc_final_output_copy2; target_qc_final_output_copy3 }
+target_qc_final_output.into { target_qc_final_output_copy1; target_qc_final_output_copy2; target_qc_final_output_copy3; target_qc_final_output_copy4; target_qc_final_output_copy5; target_qc_final_output_copy6 }
 
 ///////// PRS using plink /////////
 // Update Effect Size
@@ -402,14 +411,18 @@ process plink_accounting_for_population_stratification {
     """
 }
 
+plink_accounting_for_population_stratification_output.into { plink_accounting_for_population_stratification_output_copy1; plink_accounting_for_population_stratification_output_copy2;
+plink_accounting_for_population_stratification_output_copy3;
+plink_accounting_for_population_stratification_output_copy4 }
+
 // Finding the "best-fit" PRS
 process plink_finding_the_best_fit_prs {
 
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}/PRS_plink_results", mode: 'copy'
 
     input:
     tuple prefix, file(bed), file(bim), file(cov), file(fam), file(height) from target_data.copy7
-    tuple file(prune_in), file(prune_out), file(eigenvec), file(eigenval) from plink_accounting_for_population_stratification_output
+    tuple file(prune_in), file(prune_out), file(eigenvec), file(eigenval) from plink_accounting_for_population_stratification_output_copy1
     tuple file(profile1), file(profile2), file(profile3), file(profile4), file(profile5), file(profile6), file(profile7) from plink_generate_prs_output
 
     output:
@@ -421,3 +434,86 @@ process plink_finding_the_best_fit_prs {
     """  
 }
 
+///////// PRS using PRSice-2 /////////
+process PRSice_analysis {
+
+    publishDir "${params.outdir}/intermediate_files", mode: 'copy'
+
+    input:
+    tuple prefix, file(bed), file(bim), file(cov), file(fam), file(height) from target_data.copy8
+    tuple file(prune_in), file(prune_out), file(eigenvec), file(eigenval) from plink_accounting_for_population_stratification_output_copy2
+    file base_qc_final from base_qc_final_output
+    tuple _tmp, file(fam1), file(bed1), file(bim1) from target_qc_final_output_copy4
+
+    output:
+    file("${prefix}.covariate") into prsice_analysis_output
+
+    script:
+    prefix_qc = "${prefix}.QC"
+    """
+    R --file=${bin}/create_covariate.R --args ${cov} ${eigenvec} ${prefix}.covariate
+
+    Rscript ${params.PRSice}/PRSice.R \
+    --prsice ${params.PRSice}/PRSice_linux \
+    --base ${base_qc_final} \
+    --target ${prefix_qc} \
+    --binary-target F \
+    --pheno ${height} \
+    --cov ${prefix}.covariate \
+    --base-maf MAF:0.01 \
+    --base-info INFO:0.8 \
+    --stat OR \
+    --or \
+    --out ${prefix}
+
+    mkdir -p ${params.outdir}/PRSice_results
+    mv ${prefix}.summary ${params.outdir}/PRSice_results/
+    mv ${prefix}.prsice ${params.outdir}/PRSice_results/
+    mv ${prefix}.log ${params.outdir}/PRSice_results/
+    mv ${prefix}.best ${params.outdir}/PRSice_results/
+    mv ${prefix}*.png ${params.outdir}/PRSice_results/
+    """  
+}
+
+///////// PRS using LDpred-2 /////////
+process LDpred_2_analysis {
+
+    publishDir "${params.outdir}/LDpred_2_results", mode: 'copy'
+
+    input:
+    tuple prefix, file(bed), file(bim), file(cov), file(fam), file(height) from target_data.copy9
+    tuple file(prune_in), file(prune_out), file(eigenvec), file(eigenval) from plink_accounting_for_population_stratification_output_copy3
+    file base_qc_final from base_qc_final_output
+    tuple _tmp, file(fam1), file(bed1), file(bim1) from target_qc_final_output_copy5
+
+    output:
+    file("${prefix}_LDpred_2_result") into LDpred_2_analysis_output
+
+    script:
+    prefix_qc = "${prefix}.QC"
+    """
+    R --file=${bin}/LDpred_2_analysis.R --args ${height} ${cov} ${eigenvec} ${bed1} ${prefix_qc}.rds ${base_qc_final} > ${prefix}_LDpred_2_result
+    """  
+}
+
+///////// PRS using lassosum /////////
+process lassosum_analysis {
+
+    input:
+    tuple prefix, file(bed), file(bim), file(cov), file(fam), file(height) from target_data.copy10
+    tuple file(prune_in), file(prune_out), file(eigenvec), file(eigenval) from plink_accounting_for_population_stratification_output_copy4
+    file base_qc_final from base_qc_final_output
+    tuple _tmp, file(fam1), file(bed1), file(bim1) from target_qc_final_output_copy6
+
+    script:
+    prefix_qc = "${prefix}.QC"
+    ld_file = lassosum_prefix_to_ld_mapping["${prefix}"]
+    """
+    R --file=${bin}/lassosum_analysis.R --args ${height} ${cov} ${eigenvec} ${base_qc_final} ${prefix_qc} ${prefix} ${ld_file}
+
+    mkdir -p ${params.outdir}/lassosum_results
+    if test -f "Rplots.pdf";
+        then mv Rplots.pdf ${params.outdir}/lassosum_results/${prefix}.Rplots.pdf
+    fi
+    """  
+}

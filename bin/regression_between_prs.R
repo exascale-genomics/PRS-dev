@@ -46,4 +46,4 @@ for(i in p.threshold){
     prs.result <- rbind(prs.result, data.frame(Threshold=i, R2=prs.r2, P=prs.p, BETA=prs.beta,SE=prs.se))
 }
 # Best result is:
-print(prs.result[which.max(prs.result$R2),])
+prs.result[which.max(prs.result$R2),]
