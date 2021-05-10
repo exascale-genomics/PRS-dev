@@ -2,7 +2,9 @@
 
 Build a Nextflow workflow for PRS analysis following: https://choishingwan.github.io/PRS-Tutorial/
 
+PRS with PLINK, PRSice-2, LDpred-2, lassosum
 
+```
 reqirements:
 install nextflow:
 reqiure java
@@ -38,8 +40,9 @@ R
 install.packages(c("devtools","RcppArmadillo", "data.table", "Matrix"), dependencies=TRUE)
 library(devtools)
 install_github("tshmak/lassosum")
+```
 
-
+```
 base data applied QC:
 File transfer
 Standard GWAS QC
@@ -67,3 +70,4 @@ target data missing QC:
 Sample size
 Genome build
 Sample overlap
+```
