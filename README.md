@@ -5,9 +5,9 @@ Build a Nextflow workflow for PRS analysis following: https://choishingwan.githu
 PRS with PLINK, PRSice-2, LDpred-2, lassosum
 
 ```
-reqirements:
+requirements:
 install nextflow:
-reqiure java
+require java
 https://www.nextflow.io/docs/latest/getstarted.html
 
 R:
