@@ -1,8 +1,12 @@
 # PRS-dev
 
-Build a Nextflow workflow for PRS analysis following: https://choishingwan.github.io/PRS-Tutorial/
-
-PRS with PLINK, PRSice-2, LDpred-2, lassosum
+use nextflow to build a PRS pipeline based on: 
+```
+https://choishingwan.github.io/PRS-Tutorial/ # PRS with PLINK, PRSice-2, LDpred-2, lassosum
+https://github.com/getian107/PRScs           # PRS-CS and PRS-CSx
+https://github.com/getian107/PRScsx
+https://cnsgenomics.com/software/gctb        # SBayesR
+```
 
 ```
 reqirements:
@@ -40,6 +44,19 @@ R
 install.packages(c("devtools","RcppArmadillo", "data.table", "Matrix"), dependencies=TRUE)
 library(devtools)
 install_github("tshmak/lassosum")
+
+PRS-CS and PRS-CSx:
+git clone https://github.com/getian107/PRScs.git
+Download the LD reference panels and extract files
+sudo apt install python3-pip
+sudo pip3 install scipy h5py
+
+git clone https://github.com/getian107/PRScsx.git
+Download the SNP information file and put it in the same folder containing the reference panels
+
+SBayesR:
+https://cnsgenomics.com/software/gctb/#Tutorial
+export PATH="/scratch/SBayesR/gctb_2.03beta_Linux:$PATH"
 ```
 
 ```
